@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Independent Living — Level 1 Drag & Drop (Daily Routine)</title>
+<style>
+  :root{
+    --gap:16px; --pad:16px; --radius:18px;
+    --ink:#0f172a; --muted:#475569; --bg:#f7f8fc; --panel:#ffffff;
+    --brand:#2563eb; --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{position:sticky; top:0; z-index:10; background:linear-gradient(90deg,#e0e7ff,#e9d5ff); border-bottom:1px solid #e5e7eb; padding:10px 14px}
+  h1{margin:0; font-size:clamp(18px,2.5vw,28px);}
+  .wrap{max-width:1100px;margin:0 auto;padding:var(--pad)}
+  .card, .drop{border:2px dashed #cbd5e1; border-radius:16px; background:var(--panel); box-shadow:0 6px 20px rgba(15,23,42,.06)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+  button{border:0;border-radius:14px;padding:10px 14px;font-weight:600;cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.06);}
+  .primary{background:var(--brand);color:#fff}
+  .ghost{background:#eef2ff}
+  .good{background:var(--ok); color:#fff}
+  .bad{background:#fee2e2}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#eef2ff;border-radius:999px;padding:6px 10px;font-size:14px}
+  .grid{display:grid; gap:var(--gap)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .bank{padding:12px}
+  .items{display:flex;flex-wrap:wrap;gap:10px;min-height:64px}
+  .item{user-select:none; touch-action:none; padding:10px 12px; border:2px solid #dbeafe; border-radius:14px; background:#fff; font-size:18px; display:inline-flex; align-items:center; gap:10px; box-shadow:0 3px 10px rgba(37,99,235,.12)}
+  .item[draggable="true"]{cursor:grab}
+  .item:active{cursor:grabbing}
+  .drop{padding:14px;min-height:140px;position:relative}
+  .drop h3{margin-top:0;margin-bottom:10px;font-size:18px}
+  .hint{font-size:14px;color:var(--muted)}
+  .zone{min-height:86px; display:flex; flex-wrap:wrap; gap:10px}
+  .badge{font-size:12px; background:#f1f5f9; border-radius:999px; padding:6px 8px; display:inline-block}
+  .stage{display:none}
+  .stage.active{display:block}
+  .now-next-then{display:flex; gap:10px; margin:8px 0 14px 0; flex-wrap:wrap}
+  .nnt{flex:1; min-width:180px; background:var(--panel); border:1px solid #e5e7eb; border-radius:12px; padding:10px}
+  .nnt b{display:block; margin-bottom:6px}
+  .status{margin:8px 0; padding:10px 12px; border-radius:12px; display:none}
+  .status.show{display:block}
+  .progress{height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden}
+  .bar{height:100%; width:0; background:linear-gradient(90deg,#22c55e,#16a34a)}
+  .small{font-size:13px;color:var(--muted)}
+  .footer{margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+  .drop.highlight{outline:3px solid #fde68a}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Daily Routine — Level 1 Drag & Drop</h1>
+    <div class="small">Now • Next • Then supports, big targets, and tap‑to‑place fallback for iPad.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="toolbar">
+    <button class="primary" data-goto="stage1">1) Sort the Day</button>
+    <button class="primary" data-goto="stage2">2) Like vs Need</button>
+    <button class="primary" data-goto="stage3">3) Build My Monday</button>
+    <button class="ghost" id="toggleSelect">Tap‑to‑Place: <span id="modeLabel">Auto</span></button>
+  </nav>
+
+  <section id="stage1" class="stage active">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Drag each card into Morning, Afternoon or Evening.</div>
+      <div class="nnt"><b>Next</b> Check your answers.</div>
+      <div class="nnt"><b>Then</b> Go to “Like vs Need”.</div>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="bank card">
+        <div class="pill">🧺 Card Bank</div>
+        <div class="items" id="bank1"></div>
+      </div>
+      <div class="drop" data-accept="morning" aria-label="Morning drop zone">
+        <h3>🌅 Morning <span class="badge">9:00–12:00</span></h3>
+        <div class="zone" id="morning"></div>
+        <div class="hint">Examples: Wake up, Brush teeth, Breakfast, Work/School</div>
+      </div>
+      <div class="drop" data-accept="afternoon" aria-label="Afternoon drop zone">
+        <h3>🌤️ Afternoon <span class="badge">12:00–16:00</span></h3>
+        <div class="zone" id="afternoon"></div>
+        <div class="hint">Examples: Lunch, Work/School, Exercise</div>
+      </div>
+      <div class="drop" data-accept="evening" aria-label="Evening drop zone">
+        <h3>🌙 Evening <span class="badge">16:00–22:00</span></h3>
+        <div class="zone" id="evening"></div>
+        <div class="hint">Examples: Dinner, Shower, Relax, Bed</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar1"></div></div>
+      <div>
+        <button class="ghost" id="reset1">Reset Stage</button>
+        <button class="good" id="check1">Check Answers</button>
+      </div>
+    </div>
+    <div class="status bad" id="status1" role="status"></div>
+  </section>
+
+  <section id="stage2" class="stage">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Sort cards into “Things I Like” and “Things I Need”.</div>
+      <div class="nnt"><b>Next</b> Aim for a balance: 1 from each later.</div>
+      <div class="nnt"><b>Then</b> Build your Monday plan.</div>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="bank card">
+        <div class="pill">🧺 Card Bank</div>
+        <div class="items" id="bank2"></div>
+      </div>
+      <div class="drop" data-accept="like" aria-label="Like drop zone">
+        <h3>💙 Things I Like</h3>
+        <div class="zone" id="like"></div>
+        <div class="hint">Play games, Watch TV, Music, Friends…</div>
+      </div>
+      <div class="drop" data-accept="need" aria-label="Need drop zone">
+        <h3>✅ Things I Need</h3>
+        <div class="zone" id="need"></div>
+        <div class="hint">Brush teeth, Exercise, Tidy room, Learning…</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar2"></div></div>
+      <div>
+        <button class="ghost" id="reset2">Reset Stage</button>
+        <button class="good" id="check2">Check Answers</button>
+      </div>
+    </div>
+    <div class="status bad" id="status2" role="status"></div>
+  </section>
+
+  <section id="stage3" class="stage">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Drag 1 Like + 1 Need into each time of day.</div>
+      <div class="nnt"><b>Next</b> Press “Check Plan”.</div>
+      <div class="nnt"><b>Then</b> Print or screenshot for your portfolio.</div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="bank card">
+        <div class="pill">💙 Likes</div>
+        <div class="items" id="likes3"></div>
+        <div class="pill" style="margin-top:8px">✅ Needs</div>
+        <div class="items" id="needs3"></div>
+      </div>
+      <div class="grid grid-3">
+        <div class="drop" data-accept="plan-morning" aria-label="Plan morning">
+          <h3>🌅 Morning</h3>
+          <div class="zone plan" id="plan-morning"></div>
+          <div class="hint">Drop 2 cards: 1 Like + 1 Need</div>
+        </div>
+        <div class="drop" data-accept="plan-afternoon" aria-label="Plan afternoon">
+          <h3>🌤️ Afternoon</h3>
+          <div class="zone plan" id="plan-afternoon"></div>
+          <div class="hint">Drop 2 cards: 1 Like + 1 Need</div>
+        </div>
+        <div class="drop" data-accept="plan-evening" aria-label="Plan evening">
+          <h3>🌙 Evening</h3>
+          <div class="zone plan" id="plan-evening"></div>
+          <div class="hint">Drop 2 cards: 1 Like + 1 Need</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar3"></div></div>
+      <div>
+        <button class="ghost" id="reset3">Reset Stage</button>
+        <button class="good" id="check3">Check Plan</button>
+        <button class="ghost" id="print">Print My Routine</button>
+      </div>
+    </div>
+    <div class="status bad" id="status3" role="status"></div>
+  </section>
+</main>
+
+<script>
+// ——— Utility: simple DnD with drag+drop and tap‑to‑place fallback ——— //
+const isTouch = matchMedia('(pointer: coarse)').matches;
+let tapMode = null; // null=auto, true=tap, false=drag
+let selectedItem = null;
+
+function setTapMode(mode){
+  tapMode = mode;
+  document.getElementById('modeLabel').textContent = tapMode === null ? 'Auto' : (tapMode ? 'On' : 'Off');
+}
+setTapMode(null);
+
+document.getElementById('toggleSelect').addEventListener('click', ()=>{
+  if(tapMode === null) setTapMode(true);
+  else if (tapMode === true) setTapMode(false);
+  else setTapMode(null);
+});
+
+function shouldUseTap(){
+  return tapMode === null ? isTouch : tapMode;
+}
+
+function makeItem({id, label, emoji, group, answer}){
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.setAttribute('role','button');
+  el.setAttribute('tabindex','0');
+  el.draggable = !shouldUseTap();
+  el.dataset.id = id;
+  el.dataset.group = group || '';
+  el.dataset.answer = answer || '';
+  el.innerHTML = `<span aria-hidden="true" style="font-size:22px">${emoji||'⬜'}</span><span>${label}</span>`;
+
+  // drag
+  el.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({id, group, answer}));
+    setTimeout(()=> el.style.opacity = '0.4', 0);
+  });
+  el.addEventListener('dragend', e => {
+    el.style.opacity = '1';
+  });
+
+  // tap‑to‑place
+  el.addEventListener('click', () => {
+    if(!shouldUseTap()) return;
+    if(selectedItem === el){
+      el.style.outline = '';
+      selectedItem = null;
+      return;
+    }
+    document.querySelectorAll('.item').forEach(i=> i.style.outline='');
+    el.style.outline = '3px solid #fde68a';
+    selectedItem = el;
+  });
+
+  el.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') el.click();
+  });
+
+  return el;
+}
+
+function makeDrop(el){
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    el.classList.add('highlight');
+  });
+  el.addEventListener('dragleave', e => el.classList.remove('highlight'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('highlight');
+    try{
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const item = document.querySelector(`.item[data-id="${data.id}"]`);
+      place(el, item);
+    }catch(err){}
+  });
+
+  // tap‑to‑place: tap drop while an item is selected
+  el.addEventListener('click', ()=>{
+    if(!shouldUseTap()) return;
+    if(selectedItem){
+      place(el, selectedItem);
+      selectedItem.style.outline = '';
+      selectedItem = null;
+    }
+  });
+}
+
+function place(dropEl, item){
+  // prevent overfill in plan zones (max 2)
+  if(dropEl.classList.contains('drop')) dropEl = dropEl.querySelector('.zone') || dropEl;
+  const zone = dropEl;
+  const plan = zone.classList.contains('plan');
+  if(plan && zone.children.length >= 2){
+    bump('This box is full. Try another box.');
+    return;
+  }
+  // move item
+  zone.appendChild(item);
+  updateProgress();
+}
+
+function bump(msg){
+  // quick feedback
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.className = 'status show bad';
+  el.style.position='fixed'; el.style.left='50%'; el.style.top='12px'; el.style.transform='translateX(-50%)';
+  el.style.zIndex='9999';
+  document.body.appendChild(el);
+  setTimeout(()=> el.remove(), 1600);
+}
+
+// ——— Stage data ——— //
+const stage1Items = [
+  {id:'wake', label:'Wake up', emoji:'⏰', answer:'morning'},
+  {id:'wash', label:'Wash', emoji:'🧼', answer:'morning'},
+  {id:'teeth', label:'Brush teeth', emoji:'🪥', answer:'morning'},
+  {id:'breakfast', label:'Breakfast', emoji:'🍳', answer:'morning'},
+  {id:'work1', label:'Work / School', emoji:'🏫', answer:'morning'},
+  {id:'lunch', label:'Lunch', emoji:'🥪', answer:'afternoon'},
+  {id:'work2', label:'Work / School', emoji:'💼', answer:'afternoon'},
+  {id:'exercise', label:'Exercise', emoji:'🏃‍♂️', answer:'afternoon'},
+  {id:'dinner', label:'Dinner', emoji:'🍽️', answer:'evening'},
+  {id:'shower', label:'Shower', emoji:'🚿', answer:'evening'},
+  {id:'relax', label:'Relax / TV', emoji:'📺', answer:'evening'},
+  {id:'bed', label:'Go to bed', emoji:'🛏️', answer:'evening'},
+];
+
+const stage2Items = [
+  {id:'games', label:'Play games', emoji:'🎮', group:'like'},
+  {id:'ipad', label:'iPad time', emoji:'📱', group:'like'},
+  {id:'tv', label:'Watch TV', emoji:'📺', group:'like'},
+  {id:'music', label:'Listen to music', emoji:'🎵', group:'like'},
+  {id:'friends', label:'See friends', emoji:'👫', group:'like'},
+  {id:'brush', label:'Brush teeth', emoji:'🪥', group:'need'},
+  {id:'tidy', label:'Tidy room', emoji:'🧹', group:'need'},
+  {id:'learn', label:'Learning / Homework', emoji:'🧠', group:'need'},
+  {id:'help', label:'Help at home', emoji:'🧺', group:'need'},
+  {id:'move', label:'Exercise / Move', emoji:'🏃', group:'need'},
+];
+
+const likes3 = ['games','ipad','tv','music','friends'];
+const needs3 = ['brush','tidy','learn','help','move'];
+
+// ——— Build UI ——— //
+function buildStage1(){
+  const bank = document.getElementById('bank1');
+  bank.innerHTML = '';
+  stage1Items.forEach(it => bank.appendChild(makeItem({ ...it, group:'time' })));
+  ['morning','afternoon','evening'].forEach(id => makeDrop(document.getElementById(id).parentElement));
+}
+function buildStage2(){
+  const bank = document.getElementById('bank2'); bank.innerHTML='';
+  stage2Items.forEach(it => bank.appendChild(makeItem(it)));
+  ['like','need'].forEach(id => makeDrop(document.getElementById(id).parentElement));
+}
+function buildStage3(){
+  const likesEl = document.getElementById('likes3'); likesEl.innerHTML='';
+  const needsEl = document.getElementById('needs3'); needsEl.innerHTML='';
+  likes3.forEach(id => likesEl.appendChild(makeItem(stage2Items.find(x=>x.id===id))));
+  needs3.forEach(id => needsEl.appendChild(makeItem(stage2Items.find(x=>x.id===id))));
+  ['plan-morning','plan-afternoon','plan-evening'].forEach(id => makeDrop(document.getElementById(id).parentElement));
+}
+buildStage1(); buildStage2(); buildStage3();
+
+// ——— Nav ——— //
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', ()=>{
+    const id = btn.getAttribute('data-goto');
+    document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    updateProgress();
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+
+// ——— Reset / Check / Progress ——— //
+function resetStage(stage){
+  if(stage===1){
+    document.getElementById('bank1').append(...Array.from(document.querySelectorAll('#morning .item, #afternoon .item, #evening .item')));
+  }
+  if(stage===2){
+    document.getElementById('bank2').append(...Array.from(document.querySelectorAll('#like .item, #need .item')));
+  }
+  if(stage===3){
+    document.getElementById('likes3').append(...Array.from(document.querySelectorAll('#plan-morning .item.like, #plan-afternoon .item.like, #plan-evening .item.like')));
+    document.getElementById('needs3').append(...Array.from(document.querySelectorAll('#plan-morning .item.need, #plan-afternoon .item.need, #plan-evening .item.need')));
+    // If items lost their classes, rebuild stage3
+    buildStage3();
+  }
+  document.querySelectorAll('.status').forEach(s=>{s.classList.remove('show'); s.textContent='';});
+  updateProgress();
+}
+document.getElementById('reset1').addEventListener('click', ()=> resetStage(1));
+document.getElementById('reset2').addEventListener('click', ()=> resetStage(2));
+document.getElementById('reset3').addEventListener('click', ()=> resetStage(3));
+
+function checkStage1(){
+  const zones = ['morning','afternoon','evening'];
+  let correct = 0, total = stage1Items.length;
+  zones.forEach(z => {
+    document.querySelectorAll(`#${z} .item`).forEach(it => {
+      const ok = it.dataset.answer === z;
+      if(ok) correct++;
+    });
+  });
+  const s = document.getElementById('status1');
+  if(correct === total){ s.className='status show good'; s.textContent='Brilliant! All correct. 🎉'; }
+  else{ s.className='status show bad'; s.textContent=`Nice try — ${correct}/${total} correct. Try moving any that don’t fit the time of day.`; }
+  updateProgress();
+}
+document.getElementById('check1').addEventListener('click', checkStage1);
+
+function checkStage2(){
+  let correct = 0, total = stage2Items.length;
+  document.querySelectorAll('#like .item').forEach(it => { if(it.dataset.group==='like') correct++; });
+  document.querySelectorAll('#need .item').forEach(it => { if(it.dataset.group==='need') correct++; });
+  const s = document.getElementById('status2');
+  if(correct === total){ s.className='status show good'; s.textContent='Perfect balance! All sorted. 💪'; }
+  else{ s.className='status show bad'; s.textContent=`You sorted ${correct}/${total}. See if any cards belong in the other box.`; }
+  updateProgress();
+}
+document.getElementById('check2').addEventListener('click', checkStage2);
+
+function checkStage3(){
+  const zones = ['plan-morning','plan-afternoon','plan-evening'];
+  let okAll = true;
+  zones.forEach(id => {
+    const z = document.getElementById(id);
+    const items = Array.from(z.querySelectorAll('.item'));
+    const groups = items.map(i=> i.dataset.group);
+    if(items.length!==2 || !groups.includes('like') || !groups.includes('need')) okAll = false;
+  });
+  const s = document.getElementById('status3');
+  if(okAll){ s.className='status show good'; s.textContent='Great routine! 1 Like + 1 Need in each time. 🗓️'; }
+  else{ s.className='status show bad'; s.textContent='Each box needs 2 cards: 1 Like and 1 Need. Keep going!'; }
+  updateProgress();
+}
+document.getElementById('check3').addEventListener('click', checkStage3);
+
+function updateProgress(){
+  // stage 1 progress = items placed correctly / total
+  const total1 = stage1Items.length;
+  let placed1 = 0;
+  ['morning','afternoon','evening'].forEach(z => placed1 += document.querySelectorAll(`#${z} .item`).length);
+  document.getElementById('bar1').style.width = ((placed1/total1)*100)+'%';
+  // stage 2
+  const total2 = stage2Items.length;
+  let placed2 = document.querySelectorAll('#like .item, #need .item').length;
+  document.getElementById('bar2').style.width = ((placed2/total2)*100)+'%';
+  // stage 3
+  let count3 = 0;
+  ['plan-morning','plan-afternoon','plan-evening'].forEach(id => count3 += document.querySelectorAll(`#${id} .item`).length);
+  document.getElementById('bar3').style.width = ((count3/(3*2))*100)+'%';
+}
+
+// classify items for stage3 rebuild
+const observer = new MutationObserver(()=>{
+  document.querySelectorAll('#likes3 .item').forEach(it => it.classList.add('like'));
+  document.querySelectorAll('#needs3 .item').forEach(it => it.classList.add('need'));
+  ['plan-morning','plan-afternoon','plan-evening'].forEach(id => {
+    document.querySelectorAll(`#${id} .item`).forEach(it => {
+      it.classList.toggle('like', it.dataset.group==='like');
+      it.classList.toggle('need', it.dataset.group==='need');
+    });
+  });
+});
+observer.observe(document.body, {subtree:true, childList:true});
+
+// print
+document.getElementById('print').addEventListener('click', ()=>{
+  window.print();
+});
+
+// Accessibility: make all .drop elements droppable
+document.querySelectorAll('.drop').forEach(makeDrop);
+
+// Rebuild draggable/tap mode when toggled
+const modeBtn = document.getElementById('toggleSelect');
+modeBtn.addEventListener('click', ()=>{
+  // toggle text handled in setTapMode
+  // rebuild draggables to reflect draggable attribute
+  document.querySelectorAll('.item').forEach(el => el.draggable = !shouldUseTap());
+});
+</script>
+</body>
+</html>
